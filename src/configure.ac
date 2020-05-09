@@ -136,16 +136,12 @@ else
     if test "$ac_cv_cygwin" = "yes"; then
       AC_CHECK_PROGS(F77, g77 f2c)
     else
-      if test $use_gcc = yes; then
-        AC_CHECK_PROGS(F77, g77 f77 f90 f95 f2c)
-      else
-        AC_CHECK_PROGS(F77, f77 f90 f95 g77 f2c)
-      fi
+      AC_CHECK_PROGS(F77, f90 f95 f2c)
     fi
   fi
   if test -z "$F77"; then
     has_f77=no
-    F77=f77
+    F77=f90
     AC_MSG_WARN(no Fortran compiler was found)
   else
     has_f77=yes
@@ -285,20 +281,23 @@ if test -z "$withsys" || test "$withsys" = "no"; then
   AC_MSG_RESULT($SYSTEM)
   if test $do64bit = yes; then
     BUILD64BIT=1
-    is64bit=`echo $SYSTEM | grep 64`
-    test -z "$is64bit" && \
+    AC_CHECK_SIZEOF([void *])
+    if test $ac_cv_sizeof_void_p -lt 8; then
       AC_MSG_WARN(64bit support not found for your machine)
+      is64bit=no
+    else
+      is64bit=yes
+    fi
   fi
 else
   SYSTEM=$withsys
   AC_MSG_RESULT($SYSTEM)
-fi
-
-is64bit=`echo $SYSTEM | grep 64`
-if test -z "$is64bit"; then
-  is64bit=no
-else
-  is64bit=yes
+  is64bit=`echo $SYSTEM | grep 64`
+  if test -z "$is64bit"; then
+    is64bit=no
+  else
+    is64bit=yes
+  fi
 fi
 
 if test "$ac_cv_prog_gcc" = "no"; then
@@ -1589,8 +1588,10 @@ if test "$enableval" = "yes" ; then
       AC_MSG_ERROR(Tcl directory $tcldir not found)
     fi
     tcldir=`(cd $tcldir; pwd)`
-    if test ! -f "$tcldir/tclConfig.sh"; then
-      if test ! -f "$tcldir/unix/tclConfig.sh"; then
+    TCLCONFIG="$tcldir/tclConfig.sh"
+    if test ! -f "$TCLCONFIG"; then
+      TCLCONFIG="$tcldir/unix/tclConfig.sh"
+      if test ! -f "$TCLCONFIG"; then
         AC_MSG_ERROR(tclConfig.sh not found in $tcldir or $tcldir/unix)
       fi
     fi
@@ -1642,19 +1643,32 @@ if test "$enableval" = "yes" ; then
       if test -z "$tcldir"; then
         AC_MSG_ERROR(can't find a usable Tcl directory)
       fi
+      TCLCONFIG="$tcldir/$TCLUNIX/tclConfig.sh"
     fi
+    . $TCLCONFIG
     . $TKCONFIG
     tcllib=`ls -d $tcldir/$TCLUNIX/libtcl8* 2>/dev/null`
     tklib=`ls -d $tkdir/$TKUNIX/libtk8* 2>/dev/null`
     X11LIBS=""
-    TKINCS="-I$tcldir/generic -I$tkdir/generic"
+    if test -z "$TK_INCLUDE_SPEC" -a -z "$TCL_INCLUDE_SPEC"; then
+      TKINCS="-I$tcldir/generic -I$tkdir/generic"
+    else
+      TKINCS="$TK_INCLUDE_SPEC $TCL_INCLUDE_SPEC"
+    fi
     if test "$ac_cv_cygwin" = "yes"; then
       TKINCS="$TKINCS -I$tkdir/win -I$tkdir/xlib"
     fi
-    TKLIBS="$tcllib $tklib $TK_LIBS"
-    TCL_LIBRARY="$tcldir/library"
-    TK_LIBRARY="$tkdir/library"
-    LIBRARY_PATH="$tcldir/$TCLUNIX:$tkdir/$TKUNIX"
+    if test -z "$TK_LIB_SPEC" -a -z "$TCL_LIB_SPEC"; then 
+      TKLIBS="$tcllib $tklib $TK_LIBS"
+      TCL_LIBRARY="$tcldir/library"
+      TK_LIBRARY="$tkdir/library"
+      LIBRARY_PATH="$tcldir/$TCLUNIX:$tkdir/$TKUNIX"
+    else
+      TKLIBS="$TK_LIB_SPEC $TCL_LIB_SPEC $TK_LIBS"
+      TCL_LIBRARY="$tcldir/library"
+      TK_LIBRARY="$tkdir/library"
+      LIBRARY_PATH="$tcldir/$TCLUNIX:$tkdir/$TKUNIX"
+    fi
   fi
 
   if test -z "$TKCONFIG"; then

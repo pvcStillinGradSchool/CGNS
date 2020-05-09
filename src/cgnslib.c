@@ -257,7 +257,9 @@ const char * AverageInterfaceTypeName[NofValidAverageInterfaceTypes] =
 int n_open = 0;
 int cgns_file_size = 0;
 int file_number_offset = 0;
-int VersionList[] = {3210, 3200,
+int VersionList[] = {4200,
+                     4110, 4100, 4000,
+                     3210, 3200,
                      3140, 3130, 3110, 3100,
                      3080, 3000,
                      2550, 2540, 2530, 2520, 2510, 2500,
@@ -530,8 +532,8 @@ int cg_version(int file_number, float *FileVersion)
     if (cgi_get_nodes(cg->rootid, "CGNSLibraryVersion_t", &nnod, &id))
         return CG_ERROR;
     if (nnod==0) {
-        cg->version=1050;
-        *FileVersion= (float) 1.05;
+        cg->version=3200;
+        *FileVersion= (float) 3.20;
     } else if (nnod!=1) {
         cgi_error("More then one CGNSLibraryVersion_t node found under ROOT.");
         return CG_ERROR;
@@ -1366,7 +1368,7 @@ int cg_family_write(int file_number, int B, const char * family_name, int *F)
             return CG_ERROR;
         }
 
-        /* Check that specified base's name matches begining of family tree path */
+        /* Check that specified base's name matches beginning of family tree path */
         pch = strstr( family_name, base->name );
         if( pch != family_name+1 ) {
             cgi_error( "Incompatible basename (%s) and family tree (%s)", base->name, family_name );
@@ -4068,10 +4070,10 @@ int cg_elements_partial_read(int file_number, int B, int Z, int S,
         m_stride[0] = 1;
         m_dim[0]    = size;
 
-        if (cgio_read_data(cg->cgio, section->connect->id,
-                           s_start, s_end, s_stride, 1, m_dim,
+        if (cgio_read_data_type(cg->cgio, section->connect->id,
+                           s_start, s_end, s_stride, CG_SIZE_DATATYPE, 1, m_dim,
                            m_start, m_end, m_stride, elements)) {
-            cg_io_error("cgio_read_data");
+            cg_io_error("cgio_read_data_type");
             return CG_ERROR;
         }
     } else {
@@ -4108,10 +4110,10 @@ int cg_elements_partial_read(int file_number, int B, int Z, int S,
                 m_dim[0]   = m_end[0];
                 m_dim[1]   = 4;
 
-                if (cgio_read_data(cg->cgio, section->parelem->id,
-                                   s_start, s_end, s_stride, 2, m_dim,
+                if (cgio_read_data_type(cg->cgio, section->parelem->id,
+                                   s_start, s_end, s_stride, CG_SIZE_DATATYPE, 2, m_dim,
                                    m_start, m_end, m_stride, parent_data)) {
-                    cg_io_error("cgio_read_data");
+                    cg_io_error("cgio_read_data_type");
                     return CG_ERROR;
                 }
             }
@@ -4153,20 +4155,20 @@ int cg_elements_partial_read(int file_number, int B, int Z, int S,
             m_dim[0]   = m_end[0];
             m_dim[1]   = 4;
 
-            if (cgio_read_data(cg->cgio, section->parelem->id,
-                               s_start, s_end, s_stride, 2, m_dim,
+            if (cgio_read_data_type(cg->cgio, section->parelem->id,
+                               s_start, s_end, s_stride, CG_SIZE_DATATYPE, 2, m_dim,
                                m_start, m_end, m_stride, parent_data)) {
-                cg_io_error("cgio_read_data");
+                cg_io_error("cgio_read_data_type");
                 return CG_ERROR;
             }
 
             m_start[1] = 3;
             m_end[1]   = 4;
 
-            if (cgio_read_data(cg->cgio, section->parface->id,
-                               s_start, s_end, s_stride, 2, m_dim,
+            if (cgio_read_data_type(cg->cgio, section->parface->id,
+                               s_start, s_end, s_stride, CG_SIZE_DATATYPE, 2, m_dim,
                                m_start, m_end, m_stride, parent_data)) {
-                cg_io_error("cgio_read_data");
+                cg_io_error("cgio_read_data_type");
                 return CG_ERROR;
             }
         }
@@ -4237,10 +4239,10 @@ int cg_poly_elements_partial_read(int file_number, int B, int Z, int S,
             m_stride[0] = 1;
             m_dim[0]    = size;
 
-            if (cgio_read_data(cg->cgio, section->connect->id,
-                               s_start, s_end, s_stride, 1, m_dim,
+            if (cgio_read_data_type(cg->cgio, section->connect->id,
+                               s_start, s_end, s_stride, CG_SIZE_DATATYPE, 1, m_dim,
                                m_start, m_end, m_stride, elements)) {
-                cg_io_error("cgio_read_data");
+                cg_io_error("cgio_read_data_type");
                 return CG_ERROR;
             }
         } else {
@@ -4272,10 +4274,10 @@ int cg_poly_elements_partial_read(int file_number, int B, int Z, int S,
             m_stride[0] = 1;
             m_dim[0]    = size;
 
-            if (cgio_read_data(cg->cgio, section->connect->id,
-                               s_start, s_end, s_stride, 1, m_dim,
+            if (cgio_read_data_type(cg->cgio, section->connect->id,
+                               s_start, s_end, s_stride, CG_SIZE_DATATYPE, 1, m_dim,
                                m_start, m_end, m_stride, elements)) {
-                cg_io_error("cgio_read_data");
+                cg_io_error("cgio_read_data_type");
                 return CG_ERROR;
             }
         } else {
@@ -4321,10 +4323,10 @@ int cg_poly_elements_partial_read(int file_number, int B, int Z, int S,
                 m_dim[0]   = m_end[0];
                 m_dim[1]   = 4;
 
-                if (cgio_read_data(cg->cgio, section->parelem->id,
-                                   s_start, s_end, s_stride, 2, m_dim,
+                if (cgio_read_data_type(cg->cgio, section->parelem->id,
+                                   s_start, s_end, s_stride, CG_SIZE_DATATYPE, 2, m_dim,
                                    m_start, m_end, m_stride, parent_data)) {
-                    cg_io_error("cgio_read_data");
+                    cg_io_error("cgio_read_data_type");
                     return CG_ERROR;
                 }
             }
@@ -4366,20 +4368,20 @@ int cg_poly_elements_partial_read(int file_number, int B, int Z, int S,
             m_dim[0]   = m_end[0];
             m_dim[1]   = 4;
 
-            if (cgio_read_data(cg->cgio, section->parelem->id,
-                               s_start, s_end, s_stride, 2, m_dim,
+            if (cgio_read_data_type(cg->cgio, section->parelem->id,
+                               s_start, s_end, s_stride, CG_SIZE_DATATYPE, 2, m_dim,
                                m_start, m_end, m_stride, parent_data)) {
-                cg_io_error("cgio_read_data");
+                cg_io_error("cgio_read_data_type");
                 return CG_ERROR;
             }
 
             m_start[1] = 3;
             m_end[1]   = 4;
 
-            if (cgio_read_data(cg->cgio, section->parface->id,
-                               s_start, s_end, s_stride, 2, m_dim,
+            if (cgio_read_data_type(cg->cgio, section->parface->id,
+                               s_start, s_end, s_stride, CG_SIZE_DATATYPE, 2, m_dim,
                                m_start, m_end, m_stride, parent_data)) {
-                cg_io_error("cgio_read_data");
+                cg_io_error("cgio_read_data_type");
                 return CG_ERROR;
             }
         }
@@ -10713,8 +10715,8 @@ int cg_array_read(int A, void *Data)
     if (array->data)
         memcpy(Data, array->data, (size_t)(num*size_of(array->data_type)));
     else {
-        if (cgio_read_all_data(cg->cgio, array->id, Data)) {
-            cg_io_error("cgio_read_all_data");
+        if (cgio_read_all_data_type(cg->cgio, array->id, array->data_type, Data)) {
+            cg_io_error("cgio_read_all_data_type");
             return CG_ERROR;
         }
     }
@@ -10752,8 +10754,8 @@ int cg_array_read_as(int A, CGNS_ENUMT(DataType_t) type, void *Data)
         if (array->data)
             memcpy(Data, array->data, (size_t)(num*size_of(array->data_type)));
         else {
-            if (cgio_read_all_data(cg->cgio, array->id, Data)) {
-                cg_io_error("cgio_read_all_data");
+            if (cgio_read_all_data_type(cg->cgio, array->id, array->data_type, Data)) {
+                cg_io_error("cgio_read_all_data_type");
                 return CG_ERROR;
             }
         }
@@ -10769,8 +10771,8 @@ int cg_array_read_as(int A, CGNS_ENUMT(DataType_t) type, void *Data)
             cgi_error("Error allocating array_data");
             return CG_ERROR;
         }
-        if (cgio_read_all_data(cg->cgio, array->id, array_data)) {
-            cg_io_error("cgio_read_all_data");
+        if (cgio_read_all_data_type(cg->cgio, array->id, array->data_type, array_data)) {
+            cg_io_error("cgio_read_all_data_type");
             return CG_ERROR;
         }
     }
