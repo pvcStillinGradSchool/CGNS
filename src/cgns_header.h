@@ -24,6 +24,7 @@ freely, subject to the following restrictions:
 #include <math.h>               /* included for definition of HUGE      */
 #include "cgnstypes.h"
 #include "cgns_io.h"
+#include "cg_hashmap.h"
 
 typedef char char_33[33];
 #ifdef CG_BUILD_BASESCOPE
@@ -134,6 +135,8 @@ typedef int cgint3_t[3];
 
 #define SKIP_DATA 0
 #define READ_DATA 1
+
+#define CG_MODE_CLOSED 99
 
 /* flag for parallel reading or parallel writing */
 typedef enum {
@@ -908,6 +911,7 @@ typedef struct {            /* CGNSBase_t Node          */
     cgns_descr *descr;      /* ptrs to in-memory copy of descr      */
     int nzones;             /* number of zones in base              */
     cgns_zone *zone;        /* ptrs to in-memory copies of zones    */
+    cgns_hashmap_object *zonemap; /* hashmap to check for duplicate zone names */
     int nfamilies;          /* number of families           */
     cgns_family *family;    /* ptrs to in-memory copies of families */
     cgns_state *state;      /* ptrs to in-memory copies of Ref.state*/
@@ -1128,12 +1132,14 @@ int cgi_read_subregion(int in_link, double parent_id, int *nsubreg,
                        cgns_subreg **subreg);
 cgns_link *cgi_read_link(double node_id);
 
-CGNSDLL int cgi_datasize(int Idim, cgsize_t *CurrentDim,
+CGNSDLL int cgi_datasize(int ndim, cgsize_t *dims,
 			 CGNS_ENUMT(GridLocation_t) location,
 			 int *rind_planes, cgsize_t *DataSize);
 
 int cgi_read_node(double node_id, char_33 name, char_33 data_type,
                   int *ndim, cgsize_t *dim_vals, void **data, int data_flag);
+int cgi_read_node_data(double node_id, char_33 data_type,
+                  int* ndim, cgsize_t* dim_vals, void** data);
 CGNSDLL int cgi_get_nodes(double parent_id, char *label, int *nnodes, double **id);
 
 /* write ADF file from internal database */
@@ -1152,7 +1158,7 @@ int cgi_write_boco(double parent_id, cgns_boco *boco);
 int cgi_write_dataset(double parent_id, const char *label,  cgns_dataset *dataset);
 int cgi_write_bcdata(double bcdata_id, cgns_bcdata *bcdata);
 int cgi_write_ptset(double id, char_33 name, cgns_ptset *ptset,
-            int Ndim, void *ptset_ptr);
+            int ndim, void *ptset_ptr);
 int cgi_write_equations(double parent_id, cgns_equations *equations);
 int cgi_write_model(double parent_id, cgns_model *model);
 int cgi_write_state(double parent_id, cgns_state *state);
@@ -1259,7 +1265,9 @@ CGNSDLL CGNS_ENUMT(DataType_t) cgi_datatype(cchar_33 adf_type);
 int cgi_check_dimensions(int ndims, cglong_t *dims);
 int cgi_check_location(int dim, CGNS_ENUMT(ZoneType_t) type,
 	CGNS_ENUMT(GridLocation_t) loc);
+
 CGNSDLL int cgi_read_int_data(double id, char_33 data_type, cgsize_t cnt, cgsize_t *data);
+int cgi_read_offset_data_type(double id, char const *data_type, cgsize_t start, cgsize_t end, char const *to_type, void *to_data);
 int cgi_convert_data(cgsize_t cnt,
 	CGNS_ENUMT(DataType_t) from_type, const void *from_data,
         CGNS_ENUMT(DataType_t) to_type, void *to_data);

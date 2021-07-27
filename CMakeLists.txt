@@ -14,7 +14,11 @@ set(CMAKE_BUILD_TYPE "Release" CACHE STRING
   "one of: Release, Debug, RelWithDebInfo or MinSizeRel")
 
 project("cgns" C)
-set(CGNS_VERSION "4.2")
+
+# Determine CGNS_VERSION from src/cgnslib.h for 
+file (READ ${PROJECT_SOURCE_DIR}/src/cgnslib.h _cgnslib_h_contents)
+string (REGEX REPLACE ".*#define[ \t]+CGNS_DOTVERS[ \t]+([0-9]*)\\.([0-9])[0-9]*.*$"
+    "\\1.\\2" CGNS_VERSION ${_cgnslib_h_contents})
 
 # Allow for building a package
 set(CPACK_PACKAGE_VERSION "${CGNS_VERSION}")
@@ -42,15 +46,15 @@ endif (CYGWIN)
 
 # get some type sizes
 include(CheckTypeSize)
-CHECK_TYPE_SIZE(long SIZE_OF_LONG)
-CHECK_TYPE_SIZE(off_t SIZE_OF_OFF_T)
+CHECK_TYPE_SIZE(long SIZEOF_LONG)
+CHECK_TYPE_SIZE(off_t SIZEOF_OFF_T)
 
-if ("${SIZE_OF_OFF_T}" LESS 8)
+if ("${SIZEOF_OFF_T}" LESS 8)
   option(CGNS_ENABLE_LFS "Enable or disable large file support" "OFF")
-endif ("${SIZE_OF_OFF_T}" LESS 8)
+endif ("${SIZEOF_OFF_T}" LESS 8)
 
 if ("${CMAKE_SIZEOF_VOID_P}" GREATER 4)
-  option(CGNS_ENABLE_64BIT "Enable or disable 64-bit code building" "OFF")
+  option(CGNS_ENABLE_64BIT "Enable or disable 64-bit code building" "ON")
 else ("${CMAKE_SIZEOF_VOID_P}" GREATER 4)
   set(CGNS_ENABLE_64BIT "OFF")
 endif ("${CMAKE_SIZEOF_VOID_P}" GREATER 4)
@@ -59,6 +63,8 @@ option(CGNS_ENABLE_LEGACY "Enable or disable building legacy code (3.0 compatibl
 option(CGNS_ENABLE_SCOPING "Enable or disable scoping of enumeration values" "OFF")
 option(CGNS_ENABLE_BASE_SCOPE "Enable or disable base scoped families or connectivities" "OFF")
 option(CGNS_ENABLE_MEM_DEBUG "Enable or disable memory debugging" "OFF")
+
+set(CGNS_BUILD_SHARED "ON" CACHE BOOL "Build a shared version of the library")
 
 if (CGNS_ENABLE_LEGACY)
   set(CGNS_ENABLE_64BIT "OFF")
@@ -178,6 +184,20 @@ if(CGNS_ENABLE_FORTRAN)
         UPPERRCASE__")
     endif (ListIndex LESS 0)
   endif (FORTRAN_NAMING STREQUAL "UNKNOWN")
+
+  if (CMAKE_Fortran_COMPILER_ID STREQUAL "GNU" AND CMAKE_Fortran_COMPILER_VERSION VERSION_GREATER_EQUAL 10.0)
+    SET (CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -fallow-argument-mismatch")
+  endif()
+
+  # Warn about a gfortran 10.2.0 bug (GCC Bug 100149) which
+  # causes cg_goto_f to segfault, other versions are fine.
+   if (CMAKE_Fortran_COMPILER_ID STREQUAL "GNU" AND 
+       CMAKE_Fortran_COMPILER_VERSION VERSION_GREATER "10.1" AND 
+       CMAKE_Fortran_COMPILER_VERSION VERSION_LESS "10.3")
+    message (WARNING "Fortran mapping (cg_goto_f) is broken for the specified gfortran version.
+                           !!! IT'S ADVISABLE TO AVOID VERSION 10.2 !!!")
+  endif()
+
 endif (CGNS_ENABLE_FORTRAN)
 
 # this forces cmake to set up the required Fortran variables
@@ -214,7 +234,6 @@ if (CGNS_ENABLE_HDF5)
   find_package (HDF5 NAMES ${SEARCH_PACKAGE_NAME} COMPONENTS ${FIND_HDF_COMPONENTS})
   message (STATUS "HDF5 C libs:${HDF5_FOUND} static:${HDF5_static_C_FOUND} and shared:${HDF5_shared_C_FOUND}")
   if (HDF5_FOUND)
-    add_executable (h5dump IMPORTED)
     if (NOT HDF5_static_C_FOUND AND NOT HDF5_shared_C_FOUND)
       set (FIND_HDF_COMPONENTS C)
 
@@ -226,20 +245,13 @@ if (CGNS_ENABLE_HDF5)
       else (HDF5_BUILD_SHARED_LIBS)
         add_definitions (-DH5_BUILT_AS_STATIC_LIB)
       endif (HDF5_BUILD_SHARED_LIBS)
-      if (BUILD_SHARED_LIBS AND WIN32)
-        set_property (TARGET h5dump PROPERTY IMPORTED_LOCATION "${HDF5_TOOLS_DIR}/h5dumpdll")
-      else (BUILD_SHARED_LIBS AND WIN32)
-        set_property (TARGET h5dump PROPERTY IMPORTED_LOCATION "${HDF5_TOOLS_DIR}/h5dump")
-      endif (BUILD_SHARED_LIBS AND WIN32)
     else (NOT HDF5_static_C_FOUND AND NOT HDF5_shared_C_FOUND)
-      if (BUILD_SHARED_LIBS AND HDF5_shared_C_FOUND)
+      if (CGNS_BUILD_SHARED AND HDF5_shared_C_FOUND)
         set (LINK_LIBS ${LINK_LIBS} ${HDF5_C_SHARED_LIBRARY})
-      else (HDF5_static_C_FOUND)
+      else (CGNS_BUILD_SHARED AND HDF5_shared_C_FOUND)
         set (LINK_LIBS ${LINK_LIBS} ${HDF5_C_STATIC_LIBRARY})
-      endif (BUILD_SHARED_LIBS AND HDF5_shared_C_FOUND)
-      set_property (TARGET h5dump PROPERTY IMPORTED_LOCATION "${HDF5_TOOLS_DIR}/h5dump")
+      endif (CGNS_BUILD_SHARED AND HDF5_shared_C_FOUND)
     endif (NOT HDF5_static_C_FOUND AND NOT HDF5_shared_C_FOUND)
-    set (HDF5_DUMP_EXECUTABLE $<TARGET_FILE:h5dump>)
 
   else (HDF5_FOUND)
     find_package (HDF5) # Legacy find
@@ -257,9 +269,6 @@ if (CGNS_ENABLE_HDF5)
     endif ()
     set (LINK_LIBS ${LINK_LIBS} ${HDF5_LIBRARIES})
 
-    add_executable (h5dump IMPORTED)
-    set_property (TARGET h5dump PROPERTY IMPORTED_LOCATION "${HDF5_TOOLS_DIR}/h5dump")
-    set (HDF5_DUMP_EXECUTABLE $<TARGET_FILE:h5dump>)
   endif (HDF5_FOUND)
   set (HDF5_PACKAGE_NAME ${SEARCH_PACKAGE_NAME})
 
@@ -381,8 +390,8 @@ endif(CGNS_BUILD_SHARED)
 #-----------------------------------------------------------------------------
 option (CGNS_BUILD_TESTING "Build CGNS Testing" OFF)
 if (CGNS_BUILD_TESTING)
-  set (DART_TESTING_TIMEOUT 1200
-      CACHE INTEGER
+  set (DART_TESTING_TIMEOUT "1200"
+      CACHE STRING
       "Timeout in seconds for each test (default 1200=20minutes)"
   )
   enable_testing ()

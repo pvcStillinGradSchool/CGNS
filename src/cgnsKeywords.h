@@ -63,8 +63,8 @@ freely, subject to the following restrictions:
  *      VERSION NUMBER                                                   *
 \* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
-#define CGNS_VERSION 4200
-#define CGNS_DOTVERS 4.20
+#define CGNS_VERSION 4300
+#define CGNS_DOTVERS 4.30
 #define CGNS_COMPATVERSION 2540
 #define CGNS_COMPATDOTVERS 2.54
 
@@ -79,7 +79,6 @@ freely, subject to the following restrictions:
 #define CG_MODE_READ	0
 #define CG_MODE_WRITE	1
 #define CG_MODE_MODIFY	2
-#define CG_MODE_CLOSED	3
 
 /* function return codes */
 
